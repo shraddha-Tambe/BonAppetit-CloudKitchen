@@ -1,0 +1,21 @@
+# --- Global Secrets ---
+.env
+.DS_Store
+
+# --- Frontend (React/Node) ---
+node_modules/
+build/
+dist/
+.npm/
+
+# --- Backend (Java/Spring Boot) ---
+target/
+*.class
+*.jar
+application.properties
+
+# --- Server-Payment (C#/.NET) ---
+bin/
+obj/
+appsettings.json
+appsettings.Development.json

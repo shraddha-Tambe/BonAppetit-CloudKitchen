@@ -1,0 +1,165 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm Cream Culinary Palette */
+    --background: 30 30% 94%;
+    /* #f5ede1 - Cream */
+    --foreground: 0 0% 12%;
+    /* #1f1f1f - Dark */
+
+    --card: 30 40% 98%;
+    --card-foreground: 0 0% 12%;
+
+    --popover: 30 40% 98%;
+    --popover-foreground: 0 0% 12%;
+
+    --primary: 24 95% 53%;
+    /* Vivid Orange */
+    --primary-foreground: 60 9.1% 97.8%;
+
+    --secondary: 30 20% 85%;
+    --secondary-foreground: 0 0% 20%;
+
+    --muted: 30 20% 80%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 30 20% 85%;
+    --input: 30 40% 98%;
+    --ring: 24 95% 53%;
+
+    --radius: 1rem;
+
+    /* Glassmorphism utilities */
+    --glass-border: 0 0% 0% / 0.08;
+    --glass-background: 30 30% 98% / 0.7;
+  }
+
+  .dark {
+    --background: 30 30% 94%;
+    --foreground: 0 0% 12%;
+
+    --card: 30 40% 98%;
+    --card-foreground: 0 0% 12%;
+
+    --popover: 30 40% 98%;
+    --popover-foreground: 0 0% 12%;
+
+    --primary: 24 95% 53%;
+    --primary-foreground: 60 9.1% 97.8%;
+
+    --secondary: 30 20% 85%;
+    --secondary-foreground: 0 0% 20%;
+
+    --muted: 30 20% 80%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 30 20% 85%;
+    --input: 30 40% 98%;
+    --ring: 24 95% 53%;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-[hsl(var(--glass-background))] backdrop-blur-md border border-[hsl(var(--glass-border))];
+  }
+
+  .food-card {
+    @apply bg-card/50 border border-border rounded-xl backdrop-blur-sm hover:border-primary/50 transition-all duration-300;
+  }
+
+  .stat-card {
+    @apply bg-card/50 border border-border rounded-xl backdrop-blur-sm p-6;
+  }
+
+  .hero-gradient {
+    @apply bg-gradient-to-r from-primary via-primary/80 to-primary/60;
+  }
+
+  .kitchen-badge {
+    @apply bg-primary/20 border border-primary/30 text-primary;
+  }
+
+  .btn-primary-gradient {
+    @apply bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-700 text-primary-foreground;
+  }
+
+  .overlay-gradient {
+    @apply bg-gradient-to-b from-transparent via-transparent to-black/30;
+  }
+
+  .nav-link {
+    @apply relative text-foreground/70 hover:text-foreground transition-colors;
+  }
+
+  .nav-link.active {
+    @apply text-primary;
+  }
+
+  .nav-link.active::after {
+    @apply absolute bottom-0 left-0 right-0 h-0.5 bg-primary;
+    content: '';
+  }
+
+  .data-table {
+    @apply w-full text-sm;
+  }
+
+  .data-table thead tr {
+    @apply border-b border-border;
+  }
+
+  .data-table th {
+    @apply px-4 py-3 text-left font-semibold text-foreground;
+  }
+
+  .data-table td {
+    @apply px-4 py-3 border-b border-border/50;
+  }
+
+  .sidebar-link {
+    @apply relative;
+  }
+
+  .admin-sidebar {
+    @apply bg-card/50 backdrop-blur-md;
+  }
+
+  .floating-cart {
+    @apply fixed bottom-6 right-6 z-40;
+  }
+
+  .shadow-glow {
+    @apply shadow-[0_0_30px_hsl(16_100%_60%_/_0.3)];
+  }
+
+  .success {
+    @apply text-emerald-500;
+  }
+}
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
