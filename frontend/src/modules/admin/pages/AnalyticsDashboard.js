@@ -1,12 +1,37 @@
 import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Users, Store, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { useApp } from "@/shared/context/AppContext";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 const AnalyticsDashboard = () => {
     const context = useApp();
     const restaurants = context.restaurants || [];
     const orders = context.orders || [];
+
+    const [realStats, setRealStats] = useState({ weeklyRevenue: 0, weeklyOrders: 0 });
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch("http://localhost:8080/api/admin/stats", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setRealStats({
+                        weeklyRevenue: data.weeklyRevenue || 0,
+                        weeklyOrders: data.weeklyOrders || 0,
+                        cuisineData: data.cuisineData || {},
+                        topRestaurants: data.topRestaurants || []
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to fetch analytics", e);
+            }
+        };
+        fetchStats();
+    }, []);
 
     // Generate revenue and orders data based on real orders
     const { revenueData, ordersData, cuisineData, topRestaurants } = useMemo(() => {
@@ -21,49 +46,39 @@ const AnalyticsDashboard = () => {
             orders: Math.floor(Math.random() * 100) + 50
         }));
 
-        // Cuisine distribution based on actual restaurants
-        const cuisines = {};
-        (restaurants || []).forEach(restaurant => {
-            const cuisine = restaurant.cuisine || "Others";
-            cuisines[cuisine] = (cuisines[cuisine] || 0) + 1;
-        });
-
-        const totalRestaurants = (restaurants && restaurants.length) || 1;
-        const colors = ["#f97316", "#ef4444", "#22c55e", "#eab308", "#8b5cf6"];
-        const cuisData = Object.entries(cuisines)
+        // Cuisine distribution based on real DB data
+        const styles = ["#f97316", "#ef4444", "#22c55e", "#eab308", "#8b5cf6"];
+        const cuisData = Object.entries(realStats.cuisineData || {})
             .map(([name, count], idx) => ({
                 name,
-                value: Math.round((count / totalRestaurants) * 100),
-                color: colors[idx % colors.length]
-            }))
-            .slice(0, 5);
+                value: count,
+                color: styles[idx % styles.length]
+            }));
 
-        // Top restaurants based on real data
-        const topRest = (restaurants || [])
-            .slice(0, 5)
+        // Top restaurants based on real DB data
+        const topRest = (realStats.topRestaurants || [])
             .map((restaurant, idx) => {
-                const restaurantOrders = (orders || []).filter(o => o.restaurantId === restaurant.id);
-                const revenue = restaurantOrders.reduce((sum, order) => sum + (order.total || 0), 0);
-                const change = (Math.random() * 30 - 5).toFixed(0);
+                // Ensure revenue is a number
+                const rev = typeof restaurant.revenue === 'number' ? restaurant.revenue : 0;
                 return {
                     name: restaurant.name,
-                    orders: restaurantOrders.length,
-                    revenue: `₹${revenue.toLocaleString('en-IN')}`,
-                    change: (change > 0 ? "+" : "") + change + "%"
+                    orders: restaurant.orders,
+                    revenue: `₹${rev.toLocaleString('en-IN')}`,
+                    change: "+0%" // Backend doesn't support trend yet
                 };
             });
 
         return {
             revenueData: revData,
             ordersData: ordData,
-            cuisineData: cuisData || [],
-            topRestaurants: topRest || []
+            cuisineData: cuisData.length > 0 ? cuisData : [],
+            topRestaurants: topRest.length > 0 ? topRest : []
         };
-    }, [restaurants, orders]);
+    }, [realStats]); // Depend on realStats, not context orders
     // Calculate real metrics
-    const weeklyRevenue = revenueData.reduce((sum, day) => sum + day.revenue, 0);
-    const weeklyOrders = ordersData.reduce((sum, day) => sum + day.orders, 0);
-    const newCustomers = Math.floor(ordersData.reduce((sum, day) => sum + day.orders, 0) * 0.15);
+    const weeklyRevenue = realStats.weeklyRevenue;
+    const weeklyOrders = realStats.weeklyOrders;
+    const newCustomers = Math.floor(weeklyOrders * 0.15); // Est. 15% new
     const activeRestaurants = restaurants.filter(r => r.approved).length;
 
     return (

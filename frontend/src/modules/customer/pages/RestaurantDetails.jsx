@@ -40,11 +40,17 @@ const RestaurantProfile = () => {
 
         // Map backend fields
         const isMyKitchen = resDetails.data.restaurantName === 'My Kitchen';
+        // Override image for My Kitchen if needed
+        let imageUrl = resDetails.data.imageUrl || resDetails.data.image;
+        if (resDetails.data.restaurantName === "My Kitchen") {
+          imageUrl = 'https://webdesignbybrandon.com/wp-content/uploads/2022/11/Best-Practices-for-Effective-Restaurant-Website-Design-1.jpg';
+        }
+
         setRestaurant({
           ...resDetails.data,
           name: resDetails.data.restaurantName,
           cuisine: resDetails.data.cuisineType,
-          image: resDetails.data.imageUrl || resDetails.data.image,
+          image: imageUrl,
           rating: 4.5, // Mock rating
           reviewCount: 24,
           // Inject My Kitchen specific details if applicable

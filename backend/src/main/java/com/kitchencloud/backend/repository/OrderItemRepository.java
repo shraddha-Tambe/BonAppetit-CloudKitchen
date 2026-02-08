@@ -13,9 +13,9 @@ import java.util.List;
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
-    @Query("SELECT oi.menuItem FROM OrderItem oi GROUP BY oi.menuItem ORDER BY COUNT(oi) DESC")
-    List<MenuItem> findGlobalPopularItems(Pageable pageable);
+    @Query("SELECT oi.menuItem.id FROM OrderItem oi GROUP BY oi.menuItem.id ORDER BY COUNT(oi) DESC")
+    List<Long> findGlobalPopularItemIds(Pageable pageable);
 
-    @Query("SELECT oi.menuItem FROM OrderItem oi WHERE oi.order.user.id = :userId GROUP BY oi.menuItem ORDER BY COUNT(oi) DESC")
-    List<MenuItem> findUserFavoriteItems(@Param("userId") Long userId, Pageable pageable);
+    @Query("SELECT oi.menuItem.id FROM OrderItem oi WHERE oi.order.user.id = :userId GROUP BY oi.menuItem.id ORDER BY COUNT(oi) DESC")
+    List<Long> findUserFavoriteItemIds(@Param("userId") Long userId, Pageable pageable);
 }

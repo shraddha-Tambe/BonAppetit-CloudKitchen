@@ -25,35 +25,65 @@ public class RecommendationService {
         Set<MenuItem> recommendations = new LinkedHashSet<>();
         Pageable limit = PageRequest.of(0, 10);
 
-        // 1. Get User Favorites (if user is logged in)
-        if (userId != null) {
-            List<MenuItem> userFavorites = orderItemRepository.findUserFavoriteItems(userId, limit);
-            if (userFavorites != null) {
-                recommendations.addAll(userFavorites);
-            }
-        }
-
-        // 2. Fill with Global Popular Items if we don't have enough
-        if (recommendations.size() < 10) {
-            List<MenuItem> globalPopular = orderItemRepository.findGlobalPopularItems(limit);
-            if (globalPopular != null) {
-                for (MenuItem item : globalPopular) {
-                    if (recommendations.size() >= 10)
-                        break;
-                    recommendations.add(item);
+        try {
+            // 1. Get User Favorites (if user is logged in)
+            if (userId != null) {
+                try {
+                    List<Long> userFavoriteIds = orderItemRepository.findUserFavoriteItemIds(userId, limit);
+                    if (userFavoriteIds != null && !userFavoriteIds.isEmpty()) {
+                        List<MenuItem> favorites = menuItemRepository.findAllById(userFavoriteIds);
+                        // Filter deleted items
+                        for (MenuItem item : favorites) {
+                            if (!item.isDeleted()) {
+                                recommendations.add(item);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error fetching user favorites: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
-        }
 
-        // 3. Last Resort: Fill with ANY available items (Random/Default)
-        if (recommendations.size() < 10) {
-            // Check if we have any items at all in the system
-            List<MenuItem> allItems = menuItemRepository.findAll(limit).getContent();
-            for (MenuItem item : allItems) {
-                if (recommendations.size() >= 10)
-                    break;
-                recommendations.add(item);
+            // 2. Fill with Global Popular Items if we don't have enough
+            if (recommendations.size() < 10) {
+                try {
+                    // Increase limit for popular items to finding more candidates
+                    Pageable popularLimit = PageRequest.of(0, 50);
+                    List<Long> globalPopularIds = orderItemRepository.findGlobalPopularItemIds(popularLimit);
+                    
+                    if (globalPopularIds != null && !globalPopularIds.isEmpty()) {
+                        List<MenuItem> popularItems = menuItemRepository.findAllById(globalPopularIds);
+                        
+                        // Sort them back by popularity (order of ids) because findAllById might not preserve order
+                        // Actually, findAllById doesn't guarantee order. 
+                        // To preserve order of 'globalPopularIds', we should map them.
+                        // But strictly, we just want to add them.
+                        
+                        // We need to maintain the order of ID list for popularity
+                        java.util.Map<Long, MenuItem> itemMap = new java.util.HashMap<>();
+                        for(MenuItem item : popularItems) itemMap.put(item.getId(), item);
+                        
+                        for(Long id : globalPopularIds) {
+                            if (recommendations.size() >= 10) break;
+                            MenuItem item = itemMap.get(id);
+                            if(item != null && !item.isDeleted()) {
+                                recommendations.add(item);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error fetching global popular items: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
+            
+            // 3. REMOVED Fallback to "All Items". 
+            // We only show items that have actual order history (User or Global).
+            // This prevents "Test" items or "My Kitchen" items from appearing unless they are actually ordered.
+        } catch (Exception e) {
+            System.err.println("Critical error in recommendation service: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return new ArrayList<>(recommendations);

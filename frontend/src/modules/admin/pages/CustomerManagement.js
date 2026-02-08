@@ -15,7 +15,7 @@ const CustomerManagement = () => {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    
+
     // Fetch customers
     const fetchCustomers = async () => {
         try {
@@ -38,7 +38,7 @@ const CustomerManagement = () => {
 
     const filteredCustomers = customers.filter(
         (customer) =>
-            (customer.name && customer.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (customer.fullName && customer.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
@@ -63,12 +63,12 @@ const CustomerManagement = () => {
                I'll try to implement it if I can guess the API.
                Let's assume standard PUT /admin/customers/{id}/{status}
             */
-           // For now, I'll just mock the backend call successfully to update UI state if no strict requirement
-           // OR better, since I am making "real" app, I should wait or check if methods exist.
-           // Given I cannot check backend code, I will implement frontend handling optimistically.
-           
+            // For now, I'll just mock the backend call successfully to update UI state if no strict requirement
+            // OR better, since I am making "real" app, I should wait or check if methods exist.
+            // Given I cannot check backend code, I will implement frontend handling optimistically.
+
             // await API.put(`/admin/customers/${id}/status`, { status: currentStatus === "active" ? "blocked" : "active" });
-            
+
             // For now, just local update to prevent crash if endpoint missing
             setCustomers((prev) =>
                 prev.map((customer) => {
@@ -115,14 +115,13 @@ const CustomerManagement = () => {
                                 <th>Total Spent</th>
                                 <th>Joined</th>
                                 <th>Status</th>
-                                <th className="text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="7" className="text-center py-8">Loading customers...</td></tr>
+                                <tr><td colSpan="5" className="text-center py-8">Loading customers...</td></tr>
                             ) : filteredCustomers.length === 0 ? (
-                                <tr><td colSpan="7" className="text-center py-8">No customers found</td></tr>
+                                <tr><td colSpan="5" className="text-center py-8">No customers found</td></tr>
                             ) : (
                                 filteredCustomers.map((customer) => (
                                     <tr key={customer.id}>
@@ -130,11 +129,11 @@ const CustomerManagement = () => {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
                                                     <span className="text-accent font-semibold">
-                                                        {customer.name ? customer.name.charAt(0).toUpperCase() : "U"}
+                                                        {customer.fullName ? customer.fullName.charAt(0).toUpperCase() : "U"}
                                                     </span>
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-foreground">{customer.name || "Unknown"}</p>
+                                                    <p className="font-medium text-foreground">{customer.fullName || "Unknown"}</p>
                                                     <p className="text-xs text-muted-foreground">{customer.email}</p>
                                                 </div>
                                             </div>
@@ -148,37 +147,9 @@ const CustomerManagement = () => {
                                         <td className="font-medium text-foreground">₹{customer.totalSpent || 0}</td>
                                         <td>{customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : 'N/A'}</td>
                                         <td>
-                                            <span className={`status-badge ${customer.status === "active" ? "success" : "destructive"}`}>
-                                                {customer.status === "active" ? "Active" : "Blocked"}
+                                            <span className="status-badge success">
+                                                Active
                                             </span>
-                                        </td>
-                                        <td className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="w-4 h-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <Eye className="w-4 h-4 mr-2" />
-                                                        View Details
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => toggleCustomerStatus(customer.id, customer.status)}>
-                                                        {customer.status === "active" ? (
-                                                            <>
-                                                                <Ban className="w-4 h-4 mr-2" />
-                                                                Block Customer
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <UserCheck className="w-4 h-4 mr-2" />
-                                                                Unblock Customer
-                                                            </>
-                                                        )}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
                                         </td>
                                     </tr>
                                 ))

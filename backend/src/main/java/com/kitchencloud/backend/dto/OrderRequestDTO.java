@@ -23,6 +23,17 @@ public class OrderRequestDTO {
     private Double donationAmount;
     private String ngoId;
     private String paymentId;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("couponCode")
+    private String couponCode;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("redeemedPoints")
+    private Integer redeemedPoints;
+
+    public String getCouponCode() { return couponCode; }
+    public void setCouponCode(String couponCode) { this.couponCode = couponCode; }
+    public Integer getRedeemedPoints() { return redeemedPoints; }
+    public void setRedeemedPoints(Integer redeemedPoints) { this.redeemedPoints = redeemedPoints; }
 
     @Data
     public static class OrderItemRequest {

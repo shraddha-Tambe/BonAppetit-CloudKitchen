@@ -40,6 +40,10 @@ const Login = () => {
         role: activeTab.toUpperCase()
       });
 
+      if (!res.data.success) {
+        throw { response: { data: { message: res.data.message } } };
+      }
+
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", res.data.role);
       if (res.data.id) localStorage.setItem("id", res.data.id);
@@ -59,7 +63,7 @@ const Login = () => {
     } catch (error) {
       toast({
         title: "Login Failed",
-        description: error.response?.data?.message || "Invalid credentials",
+        description: error.response?.data?.message || error.message || "Invalid credentials",
         variant: "destructive"
       });
     }

@@ -20,7 +20,7 @@ const RestaurantApproval = () => {
         try {
             setLoading(true);
             let all = [];
-            
+
             // Try pending
             try {
                 const pendingRes = await API.get("/admin/restaurants/pending");
@@ -43,12 +43,16 @@ const RestaurantApproval = () => {
 
             // Fallback
             if (all.length === 0) {
-                 try {
-                     const res = await API.get("/admin/restaurants");
-                     if (Array.isArray(res.data)) all = res.data;
-                 } catch(e) {}
+                try {
+                    const res = await API.get("/admin/restaurants");
+                    if (Array.isArray(res.data)) all = res.data;
+                } catch (e) { }
             }
-            
+
+
+            // Filter out My Kitchen (Admin's own restaurant)
+            all = all.filter(r => r.restaurantName !== "My Kitchen");
+
             console.log("Fetched restaurants:", all);
             setRestaurants(all);
         } catch (error) {
@@ -99,10 +103,10 @@ const RestaurantApproval = () => {
     // We'll use a single list for simplicity if we only have one endpoint
     // OR we can try to assume there might be pending and approved.
     // Let's rely on the requirement: "fetch pending lists".
-    
+
     // RE-READING REQUIREMENT 4: "On page load, fetch pending lists: GET /api/admin/restaurants/pending"
     // This implies I should primarily show pending items.
-    
+
     // Implementing fetch with the specific endpoint:
 
 
@@ -110,11 +114,11 @@ const RestaurantApproval = () => {
     const filteredRestaurants = (Array.isArray(restaurants) ? restaurants : []).filter((restaurant) => {
         const name = restaurant.name || restaurant.restaurantName || "";
         const owner = restaurant.ownerName || restaurant.owner || "";
-        
+
         const matchesSearch =
             name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             owner.toLowerCase().includes(searchTerm.toLowerCase());
-        
+
         const status = getStatus(restaurant);
         const matchesFilter = filter === "all" || status === filter;
         return matchesSearch && matchesFilter;
@@ -156,7 +160,7 @@ const RestaurantApproval = () => {
     // Request only listed approve/reject. I will use reject for remove in this context or hide the remove button if it's not supported.
     // The UI has a separate remove button. I'll map it to reject for now as "Remove" usually means "Delete/Reject" in approval context.
     const handleRemove = async (id, name) => {
-         await handleReject(id, name);
+        await handleReject(id, name);
     };
 
     const handleDelete = async (id, name) => {
@@ -203,8 +207,8 @@ const RestaurantApproval = () => {
                         key={status}
                         onClick={() => setFilter(status)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === status
-                                ? "bg-accent text-accent-foreground"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
                             }`}
                     >
                         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -217,94 +221,94 @@ const RestaurantApproval = () => {
                 {filteredRestaurants.map((restaurant) => {
                     const status = getStatus(restaurant);
                     return (
-                    <div key={restaurant.id} className="stat-card">
-                        <div className="flex items-start justify-between mb-4">
-                            <div>
-                                <h3 className="font-semibold text-lg text-foreground">{restaurant.name || restaurant.restaurantName || "Unknown Restaurant"}</h3>
-                                <p className="text-sm text-muted-foreground">{restaurant.cuisine || "Multi-cuisine"} Cuisine</p>
-                            </div>
-                            <span
-                                className={`status-badge ${status === "approved"
+                        <div key={restaurant.id} className="stat-card">
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <h3 className="font-semibold text-lg text-foreground">{restaurant.name || restaurant.restaurantName || "Unknown Restaurant"}</h3>
+                                    <p className="text-sm text-muted-foreground">{restaurant.cuisine || "Multi-cuisine"} Cuisine</p>
+                                </div>
+                                <span
+                                    className={`status-badge ${status === "approved"
                                         ? "success"
                                         : "warning"
-                                    }`}
-                            >
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </span>
-                        </div>
+                                        }`}
+                                >
+                                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                                </span>
+                            </div>
 
-                        <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <span className="font-medium text-foreground">Owner:</span> {restaurant.ownerName}
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <span className="font-medium text-foreground">Owner:</span> {restaurant.ownerName}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Mail className="w-4 h-4" />
+                                    {restaurant.email}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Phone className="w-4 h-4" />
+                                    {restaurant.phone}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <MapPin className="w-4 h-4" />
+                                    {restaurant.address}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Clock className="w-4 h-4" />
+                                    Applied: {new Date(restaurant.createdAt).toLocaleDateString()}
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Mail className="w-4 h-4" />
-                                {restaurant.email}
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Phone className="w-4 h-4" />
-                                {restaurant.phone}
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <MapPin className="w-4 h-4" />
-                                {restaurant.address}
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Clock className="w-4 h-4" />
-                                Applied: {new Date(restaurant.createdAt).toLocaleDateString()}
-                            </div>
-                        </div>
 
-                        {status === "pending" && (
-                            <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                                <Button
-                                    onClick={() => handleApprove(restaurant.id, restaurant.name)}
-                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                                >
-                                    <Check className="w-4 h-4 mr-2" />
-                                    Approve
-                                </Button>
-                                <Button
-                                    onClick={() => handleReject(restaurant.id, restaurant.name)}
-                                    variant="destructive"
-                                    className="flex-1"
-                                >
-                                    <X className="w-4 h-4 mr-2" />
-                                    Reject
-                                </Button>
-                                <Button
-                                    onClick={() => handleDelete(restaurant.id, restaurant.name)}
-                                    variant="destructive"
-                                    className="flex-1 bg-red-600 hover:bg-red-700"
-                                >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete
-                                </Button>
-                            </div>
-                        )}
-                        
-                        {/* Removed view details logic availability for now to simplify, or keep if data is sufficient */}
-                        {status !== "pending" && (
-                             <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                                <Button 
-                                    variant="outline" 
-                                    className="flex-1"
-                                    onClick={() => setSelectedRestaurant(restaurant)}
-                                >
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    View Details
-                                </Button>
-                                <Button 
-                                    variant="destructive" 
-                                    className="flex-1"
-                                    onClick={() => handleDelete(restaurant.id, restaurant.name)}
-                                >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete
-                                </Button>
-                            </div>
-                        )}
-                    </div>
+                            {status === "pending" && (
+                                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                                    <Button
+                                        onClick={() => handleApprove(restaurant.id, restaurant.name)}
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                        <Check className="w-4 h-4 mr-2" />
+                                        Approve
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleReject(restaurant.id, restaurant.name)}
+                                        variant="destructive"
+                                        className="flex-1"
+                                    >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Reject
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleDelete(restaurant.id, restaurant.name)}
+                                        variant="destructive"
+                                        className="flex-1 bg-red-600 hover:bg-red-700"
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* Removed view details logic availability for now to simplify, or keep if data is sufficient */}
+                            {status !== "pending" && (
+                                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => setSelectedRestaurant(restaurant)}
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View Details
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        className="flex-1"
+                                        onClick={() => handleDelete(restaurant.id, restaurant.name)}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
                     );
                 })}
             </div>
@@ -326,8 +330,8 @@ const RestaurantApproval = () => {
                             {/* Restaurant Image */}
                             {selectedRestaurant.image && (
                                 <div className="w-full h-64 rounded-lg overflow-hidden bg-muted">
-                                    <img 
-                                        src={selectedRestaurant.image} 
+                                    <img
+                                        src={selectedRestaurant.image}
                                         alt={selectedRestaurant.name}
                                         className="w-full h-full object-cover"
                                     />
@@ -386,10 +390,10 @@ const RestaurantApproval = () => {
                                 {/* Registration Date */}
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Clock className="w-4 h-4" />
-                                    Applied: {new Date(selectedRestaurant.createdAt).toLocaleDateString('en-US', { 
-                                        year: 'numeric', 
-                                        month: 'long', 
-                                        day: 'numeric' 
+                                    Applied: {new Date(selectedRestaurant.createdAt).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
                                     })}
                                 </div>
                             </div>

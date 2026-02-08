@@ -274,9 +274,16 @@ const Restaurants = () => {
               {/* Note: RestaurantCard expects props. Ensure backend field names match or map them */}
               <RestaurantCard restaurant={{
                 ...restaurant,
-                name: restaurant.restaurantName, // Map backend 'restaurantName' to 'name'
-                cuisine: restaurant.cuisineType, // Map 'cuisineType' to 'cuisine'
-                image: getImageUrl(restaurant.imageUrl || restaurant.image) // Map 'imageUrl' to 'image', fallback
+                name: restaurant.restaurantName,
+                cuisine: restaurant.cuisineType,
+                // Ensure My Kitchen gets its specific data - Match by ID OR Name
+                isMyKitchen: restaurant.id === 12 || restaurant.restaurantName === 'My Kitchen',
+                image: (restaurant.id === 12 || restaurant.restaurantName === 'My Kitchen')
+                  ? getImageUrl('my-kitchen.jpg')
+                  : getImageUrl(restaurant.imageUrl || restaurant.image),
+                address: ((restaurant.id === 12 || restaurant.restaurantName === 'My Kitchen') && !restaurant.address)
+                  ? 'Pune, Maharashtra'
+                  : (restaurant.address || 'Address not available')
               }} />
             </div>))}
           </div>) : (<div className="text-center py-16">

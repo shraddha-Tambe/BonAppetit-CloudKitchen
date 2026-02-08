@@ -11,7 +11,7 @@ export const AppProvider = ({ children }) => {
         return saved ? JSON.parse(saved) : [];
     });
     // ... other states ...
-    
+
     const [currentUser, setCurrentUser] = useState(null);
 
     // Initial Auth Check
@@ -23,7 +23,7 @@ export const AppProvider = ({ children }) => {
                 // We use the same logic as auth.js helper
                 const base64Url = token.split('.')[1];
                 const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
                     return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
                 }).join(''));
                 const user = JSON.parse(jsonPayload);
@@ -47,10 +47,25 @@ export const AppProvider = ({ children }) => {
     // Fetch initial data
     useEffect(() => {
         const fetchInitialData = async () => {
-             try {
+            try {
                 // Fetch Approved Restaurants
                 const restRes = await API.get("/restaurants");
                 const approvedRestaurants = Array.isArray(restRes.data) ? restRes.data : [];
+
+                // Fetch Approved NGOs
+                try {
+                    const ngoRes = await API.get("/ngos"); // Public endpoint for approved NGOs
+                    if (ngoRes.data && Array.isArray(ngoRes.data)) {
+                        const mappedNgos = ngoRes.data.map(n => ({
+                            ...n,
+                            name: n.organizationName || n.name,
+                            image: n.imageUrl || n.image
+                        }));
+                        setNgos(mappedNgos);
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch NGOs", e);
+                }
 
                 // Fetch dishes from public endpoint
                 const dishesRes = await API.get("/dishes");
@@ -58,40 +73,38 @@ export const AppProvider = ({ children }) => {
                 const adminDishes = Array.isArray(dishesRes.data) ? dishesRes.data : [];
 
                 let allRestaurants = [...approvedRestaurants];
-                
+
                 // Find or Create "My Kitchen" representation for frontend
                 let myKitchen = allRestaurants.find(r => r.restaurantName === "My Kitchen");
                 console.log("DEBUG: Found My Kitchen in list:", myKitchen);
-                
+
                 if (myKitchen) {
                     myKitchen.isMyKitchen = true;
                     myKitchen.menu = adminDishes;
-                    myKitchen.rating = 4.8; 
-                    myKitchen.reviewCount = 200;
-                    // Force specific details
-                    myKitchen.description = 'A modern, functional kitchen by Sahil, Shashwat, Shraddha & Vaishnavi';
-                    myKitchen.phone = '9999999999';
-                    myKitchen.address = 'Pune';
+                    if (!myKitchen.rating) myKitchen.rating = 4.8;
+                    if (!myKitchen.reviewCount) myKitchen.reviewCount = 200;
+                    if (!myKitchen.address) myKitchen.address = 'Pune';
+                    if (!myKitchen.image) myKitchen.image = 'https://webdesignbybrandon.com/wp-content/uploads/2022/11/Best-Practices-for-Effective-Restaurant-Website-Design-1.jpg';
+
                     console.log("DEBUG: Attached menu to existing My Kitchen");
-                } else if (adminDishes.length > 0) {
-                     // Fallback: Create a dummy "My Kitchen"
-                     myKitchen = {
-                         id: 12,
-                         restaurantName: 'My Kitchen',
-                         name: 'My Kitchen',
-                         isMyKitchen: true,
-                         description: 'A modern, functional kitchen by Sahil, Shashwat, Shraddha & Vaishnavi',
-                         phone: '9999999999',
-                         address: 'Pune',
-                         menu: adminDishes,
-                         rating: 5.0,
-                         approved: true,
-                         image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=500&fit=crop'
-                     };
-                     allRestaurants.unshift(myKitchen);
-                     console.log("DEBUG: Created artificial My Kitchen with menu");
                 } else {
-                    console.log("DEBUG: No dishes found and My Kitchen not in list");
+                    // Fallback: Always create a "My Kitchen" placeholder if not found in backend
+                    // This ensures the Home page section always works
+                    myKitchen = {
+                        id: 'my-kitchen-fallback',
+                        restaurantName: 'My Kitchen',
+                        name: 'My Kitchen',
+                        isMyKitchen: true,
+                        description: 'Welcome to My Kitchen. We serve fresh and delicious food.',
+                        phone: '9999999999',
+                        address: 'Pune',
+                        menu: adminDishes,
+                        rating: 5.0,
+                        approved: true,
+                        image: 'https://webdesignbybrandon.com/wp-content/uploads/2022/11/Best-Practices-for-Effective-Restaurant-Website-Design-1.jpg'
+                    };
+                    allRestaurants.unshift(myKitchen);
+                    console.log("DEBUG: Created artificial My Kitchen fallback");
                 }
 
                 // Map backend properties to frontend expected properties if needed
@@ -100,7 +113,7 @@ export const AppProvider = ({ children }) => {
                     name: r.restaurantName || r.name, // Handle backend/frontend mismatch
                     menu: r.menu || [] // Ensure menu array
                 }));
-                
+
                 console.log("DEBUG: Final mapped restaurants:", mappedRestaurants);
 
                 setRestaurants(mappedRestaurants);
@@ -280,7 +293,7 @@ export const AppProvider = ({ children }) => {
     const removeNGO = (id) => {
         setNgos(prev => prev.filter(n => n.id !== id));
     };
-    const getApprovedNGOs = () => ngos.filter(n => n.isApproved);
+    const getApprovedNGOs = () => ngos.filter(n => n.approved || n.isApproved);
     // Donation functions
     const addMoneyDonation = (donationData) => {
         const newDonation = {
@@ -403,12 +416,16 @@ export const AppProvider = ({ children }) => {
         getImageUrl: (path) => {
             if (!path) return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop';
             if (path.startsWith('http') || path.startsWith('data:')) return path;
-            return `http://localhost:8080/images/${path}`;
-        },
-        getImageUrl: (path) => {
-            if (!path) return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop';
-            if (path.startsWith('http') || path.startsWith('data:')) return path;
-            return `http://localhost:8080/images/${path}`;
+
+            // Handle paths that might already have 'uploads/' or 'images/' from backend
+            if (path.startsWith('/')) path = path.substring(1);
+
+            // If path doesn't start with images/ or uploads/, prepend images/
+            if (!path.startsWith('images/') && !path.startsWith('uploads/')) {
+                path = `images/${path}`;
+            }
+
+            return `http://localhost:8080/${path}`;
         }
     }}>
         {children}

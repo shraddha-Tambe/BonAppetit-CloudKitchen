@@ -11,7 +11,7 @@ const Index = () => {
   const { restaurants } = useApp();
   // My Kitchen is always first
   const myKitchen = restaurants.find(r => r.isMyKitchen);
-  const otherRestaurants = restaurants.filter(r => !r.isMyKitchen && r.approved);
+  const otherRestaurants = restaurants.filter(r => !r.isMyKitchen);
   const sortedRestaurants = myKitchen ? [myKitchen, ...otherRestaurants] : otherRestaurants;
   const featuredDishes = myKitchen?.menu.slice(0, 4) || [];
   return (<Layout>

@@ -16,6 +16,7 @@ const Cart = () => {
   const navigate = useNavigate();
   const { cart, removeFromCart, updateCartQuantity, clearCart, getCartTotal, applyCoupon, currentUser, createOrder, getApprovedNGOs, getImageUrl } = useApp();
   const [couponCode, setCouponCode] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState(''); // Store the actual applied coupon
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -38,18 +39,50 @@ const Cart = () => {
     };
   }, [isCheckoutOpen]);
 
-  // Get approved NGOs from context
+  const [points, setPoints] = useState(0);
+  const [isPointsRedeemed, setIsPointsRedeemed] = useState(false);
+
+  // Fetch approved NGOs and user points
   const approvedNGOs = getApprovedNGOs();
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      API.get(`/users/${currentUser.id}`)
+        .then(res => setPoints(res.data.loyaltyPoints || 0))
+        .catch(err => console.error(err));
+    }
+  }, [currentUser]);
+
   const [address, setAddress] = useState(currentUser?.address || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
   const { subtotal, tax, deliveryCharge, total } = getCartTotal();
   const discountAmount = (subtotal * appliedDiscount) / 100;
+
+  // Points Logic: 2 Points = ₹1 Discount (0.5 rate)
+  const conversionRate = 0.5;
+  const canRedeem = points >= 100;
+
+  // Calculate max points we can use (limited by total bill and user balance)
+  // We need (total - discountAmount) / conversionRate points to cover the whole bill
+  const maxPointsForBill = (total - discountAmount) / conversionRate;
+  const pointsToUse = isPointsRedeemed ? Math.min(points, Math.floor(maxPointsForBill)) : 0;
+
+  const pointsDiscount = pointsToUse * conversionRate;
+
   const donation = parseFloat(donationAmount) || 0;
-  const finalTotal = total - discountAmount + donation;
+  const finalTotal = total - discountAmount - pointsDiscount + donation;
+
+  // ... (inside handlePlaceOrder/processBackendOrders)
+
+
+
+  // ... (UI Section)
+
   const handleApplyCoupon = () => {
     const result = applyCoupon(couponCode);
     if (result.valid) {
       setAppliedDiscount(result.discount);
+      setAppliedCouponCode(couponCode); // Track valid coupon
       toast({
         title: 'Coupon Applied!',
         description: `You got ${result.discount}% off!`,
@@ -169,7 +202,9 @@ const Cart = () => {
             discount: groupDiscount,
             donationAmount: donation,
             ngoId: selectedNGOObj?.id || null,
-            total: groupSubtotal + groupTax + 40 - groupDiscount + donation,
+            total: groupSubtotal + groupTax + 40 - groupDiscount + donation - pointsDiscount, // Adjust total
+            redeemedPoints: pointsToUse,
+            couponCode: appliedDiscount > 0 ? appliedCouponCode : null, // Send applied coupon
             paymentId: paymentId // Pass paymentId if available
           };
 
@@ -309,7 +344,12 @@ const Cart = () => {
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {cart.map((item) => (<div key={item.menuItem.id} className="food-card flex gap-4 p-4">
-            <img src={getImageUrl(item.menuItem.image)} alt={item.menuItem.name} className="w-24 h-24 rounded-lg object-cover" />
+            <img
+              src={getImageUrl(item.menuItem.image || item.menuItem.imageUrl)}
+              alt={item.menuItem.name}
+              className="w-24 h-24 rounded-lg object-cover"
+              onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop"; }}
+            />
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <div>
@@ -427,6 +467,40 @@ const Cart = () => {
             <Label>Phone Number</Label>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 XXXXX XXXXX" />
           </div>
+
+          {/* Points Redemption */}
+          {points > 100 && (
+            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-foreground flex items-center gap-2">
+                    Use Kitchen Coins
+                    <span className="text-xs bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 px-2 py-0.5 rounded">Balance: {points}</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Redeem your coins for a discount. (1 Coin = ₹1)
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="redeem-points"
+                    checked={isPointsRedeemed}
+                    onChange={(e) => setIsPointsRedeemed(e.target.checked)}
+                    className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
+                  />
+                  <Label htmlFor="redeem-points" className="font-medium cursor-pointer">
+                    Redeem
+                  </Label>
+                </div>
+              </div>
+              {isPointsRedeemed && (
+                <p className="text-sm font-medium text-amber-600 mt-2">
+                  - ₹{pointsDiscount.toFixed(0)} will be deducted from your total.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Payment Method */}
           <div className="space-y-3">

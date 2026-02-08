@@ -17,6 +17,12 @@ import java.util.List;
 @RequestMapping("/api/orders")
 public class OrderController {
 
+    public OrderController() {
+        System.out.println("!!! KITCHEN CLOUD BACKEND UPDATED - VERSION 2 !!!");
+        System.out.println("!!! KITCHEN CLOUD BACKEND UPDATED - VERSION 2 !!!");
+        System.out.println("!!! KITCHEN CLOUD BACKEND UPDATED - VERSION 2 !!!");
+    }
+
     @Autowired
     private OrderRepository orderRepository;
 
@@ -43,6 +49,32 @@ public class OrderController {
             Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                     .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
+            // 0. Handle Coupon Reuse
+            System.out.println("DEBUG: Coupon Code Received: " + request.getCouponCode());
+            if (request.getCouponCode() != null && !request.getCouponCode().trim().isEmpty()) {
+                String code = request.getCouponCode().trim().toUpperCase();
+                System.out.println("DEBUG: User Used Coupons: " + user.getUsedCoupons());
+                
+                if (user.getUsedCoupons().contains(code)) {
+                    System.out.println("DEBUG: Coupon REJECTED (Already Used)");
+                    return ResponseEntity.badRequest().body("Coupon '" + code + "' has already been used!");
+                }
+                user.getUsedCoupons().add(code);
+                user = userRepository.save(user); // Persist coupon usage immediately
+                System.out.println("DEBUG: Coupon ACCEPTED and Saved. List: " + user.getUsedCoupons());
+            } else {
+                 System.out.println("DEBUG: No Coupon Code in Request");
+            }
+
+            // 1. Handle Point Redemption
+            if (request.getRedeemedPoints() != null && request.getRedeemedPoints() > 0) {
+                if (user.getLoyaltyPoints() < request.getRedeemedPoints()) {
+                    return ResponseEntity.badRequest().body("Insufficient loyalty points");
+                }
+                user.setLoyaltyPoints(user.getLoyaltyPoints() - request.getRedeemedPoints());
+                user = userRepository.save(user); // Capture saved entity
+            }
+
             Order order = new Order();
             order.setUser(user);
             order.setRestaurant(restaurant);
@@ -68,6 +100,16 @@ public class OrderController {
             order.setItems(orderItems);
 
             orderRepository.save(order);
+
+            // Loyalty Program: Award points if ordering from 'My Kitchen' using updated user object
+            if ("My Kitchen".equalsIgnoreCase(restaurant.getRestaurantName())) {
+                int pointsEarned = (int) (order.getTotalAmount() / 10); // 10% of order value
+                if (pointsEarned > 0) {
+                    user.setLoyaltyPoints(user.getLoyaltyPoints() + pointsEarned);
+                    user = userRepository.save(user); // Capture saved entity again
+                }
+            }
+
             return ResponseEntity.ok(order);
         } catch (Exception e) {
             e.printStackTrace();

@@ -1,6 +1,9 @@
 import { Users, Store, Truck, ShoppingBag, TrendingUp, TrendingDown, DollarSign, Clock } from "lucide-react";
 import { useApp } from "@/shared/context/AppContext";
 import { useMemo, useState, useEffect } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 const DashboardOverview = () => {
     const context = useApp();
@@ -11,6 +14,8 @@ const DashboardOverview = () => {
 
     const [stats, setStats] = useState([]);
     const [recentOrders, setRecentOrders] = useState([]);
+    const [orderStatusData, setOrderStatusData] = useState([]);
+    const [totalRevenue, setTotalRevenue] = useState(0); // Add state for real revenue
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -19,7 +24,7 @@ const DashboardOverview = () => {
                 // Fetch Stats
                 const token = localStorage.getItem('token');
                 const headers = { "Authorization": `Bearer ${token}` };
-                
+
                 const statsResponse = await fetch("http://localhost:8080/api/admin/stats", { headers });
                 if (statsResponse.ok) {
                     const data = await statsResponse.json();
@@ -61,6 +66,13 @@ const DashboardOverview = () => {
                             bgColor: "bg-purple-100",
                         },
                     ]);
+
+                    // Process Chart Data
+                    const statusData = Object.entries(data.ordersPerStatus || {}).map(([name, value]) => ({ name, value }));
+                    setOrderStatusData(statusData);
+
+                    // Set Real Total Revenue
+                    setTotalRevenue(data.totalRevenue || 0);
                 }
 
                 // Fetch Recent Orders
@@ -69,8 +81,8 @@ const DashboardOverview = () => {
                     const data = await ordersResponse.json();
                     setRecentOrders(data.map(order => ({
                         id: `#ORD-${(order.id || '').toString().padStart(4, '0')}`,
-                        customer: order.user ? order.user.name : "Unknown",
-                        restaurant: order.restaurant ? order.restaurant.name : "Unknown",
+                        customer: order.user?.fullName || "Unknown",
+                        restaurant: order.restaurant?.restaurantName || "Unknown",
                         amount: `₹${order.totalAmount || 0}`,
                         status: order.status || "Pending"
                     })));
@@ -85,8 +97,8 @@ const DashboardOverview = () => {
         fetchDashboardData();
     }, []);
 
-    // Calculate revenue metrics
-    const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+    // Use server-side revenue
+    // const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0); // Removed client-side calc
     const deliveryTime = 28; // Average in minutes
     return (
         <div className="space-y-6 animate-fade-in">
@@ -121,6 +133,58 @@ const DashboardOverview = () => {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="stat-card">
+                    <h3 className="font-semibold text-foreground mb-4">Order Status Distribution</h3>
+                    <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={orderStatusData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                >
+                                    {orderStatusData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="stat-card">
+                    <h3 className="font-semibold text-foreground mb-4">Orders Overview</h3>
+                    <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                data={orderStatusData}
+                                margin={{
+                                    top: 5,
+                                    right: 30,
+                                    left: 20,
+                                    bottom: 5,
+                                }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="value" fill="#8884d8" name="Orders" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
             </div>
 
             {/* Revenue & Orders Row */}
@@ -194,10 +258,10 @@ const DashboardOverview = () => {
                                     <td>
                                         <span
                                             className={`status-badge ${order.status === "Delivered"
-                                                    ? "success"
-                                                    : order.status === "In Transit"
-                                                        ? "warning"
-                                                        : "destructive"
+                                                ? "success"
+                                                : order.status === "In Transit"
+                                                    ? "warning"
+                                                    : "destructive"
                                                 }`}
                                         >
                                             {order.status}

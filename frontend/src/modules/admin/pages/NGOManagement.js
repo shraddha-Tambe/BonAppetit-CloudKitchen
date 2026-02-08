@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Heart, MapPin, Phone, Mail, Check, X, Trash2 } from "lucide-react";
+import { Search, Heart, MapPin, Phone, Mail, Check, X, Trash2, Eye } from "lucide-react";
 import API from "@/services/api";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -19,10 +19,10 @@ const NGOManagement = () => {
     // Fetch NGOs on mount
     useEffect(() => {
         const fetchNGOs = async () => {
-             try {
+            try {
                 setLoading(true);
                 let all = [];
-                
+
                 // Try pending
                 try {
                     const pendingRes = await API.get("/admin/ngos/pending");
@@ -38,21 +38,21 @@ const NGOManagement = () => {
                 } catch (e) {
                     // console.error("Failed to fetch approved NGOs", e);
                 }
-                
+
                 // Fallback: try generic /admin/ngos if logic differs
                 if (all.length === 0) {
-                     try {
+                    try {
                         const res = await API.get("/admin/ngos");
                         if (res.data) all = res.data;
-                     } catch (e) {}
+                    } catch (e) { }
                 }
 
                 setNgos(all);
-             } catch (err) {
-                 console.error(err);
-             } finally {
-                 setLoading(false);
-             }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchNGOs();
     }, []);
@@ -61,11 +61,11 @@ const NGOManagement = () => {
         const name = ngo.organizationName || ngo.name || "";
         const contact = ngo.contactNumber || ngo.contact || "";
         const searchUpper = searchTerm.toLowerCase();
-        
+
         const matchesSearch =
             name.toLowerCase().includes(searchUpper) ||
             contact.toLowerCase().includes(searchUpper);
-            
+
         const status = ngo.approved ? "approved" : "pending";
         const matchesFilter = filter === "all" || status === filter;
         return matchesSearch && matchesFilter;
@@ -133,8 +133,8 @@ const NGOManagement = () => {
                         key={status}
                         onClick={() => setFilter(status)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === status
-                                ? "bg-accent text-accent-foreground"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
                             }`}
                     >
                         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -170,83 +170,94 @@ const NGOManagement = () => {
                     const name = ngo.organizationName || ngo.name || "Unknown NGO";
                     const contact = ngo.contactNumber || ngo.contact || "N/A";
                     const image = ngo.imageUrl || ngo.image;
-                    
+
                     return (
-                    <div key={ngo.id} className="stat-card">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-pink-100 flex items-center justify-center overflow-hidden">
-                                     {image ? 
-                                        <img src={getImageUrl(image)} alt={name} className="w-full h-full object-cover" /> :
-                                        <Heart className="w-6 h-6 text-pink-600" />
-                                     }
+                        <div key={ngo.id} className="stat-card">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-xl bg-pink-100 flex items-center justify-center overflow-hidden">
+                                        {image ?
+                                            <img src={getImageUrl(image)} alt={name} className="w-full h-full object-cover" /> :
+                                            <Heart className="w-6 h-6 text-pink-600" />
+                                        }
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-lg text-foreground">{name}</h3>
+                                        <p className="text-sm text-muted-foreground">{ngo.type}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold text-lg text-foreground">{name}</h3>
-                                    <p className="text-sm text-muted-foreground">{ngo.type}</p>
+                                <span
+                                    className={`status-badge ${ngo.approved ? "success" : "warning"}`}
+                                >
+                                    {ngo.approved ? "Approved" : "Pending"}
+                                </span>
+                            </div>
+
+                            <div className="space-y-2 text-sm mb-4">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Mail className="w-4 h-4" />
+                                    {ngo.email}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Phone className="w-4 h-4" />
+                                    {contact}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <MapPin className="w-4 h-4" />
+                                    {ngo.city}
                                 </div>
                             </div>
-                            <span
-                                className={`status-badge ${ngo.approved ? "success" : "warning"}`}
-                            >
-                                {ngo.approved ? "Approved" : "Pending"}
-                            </span>
-                        </div>
 
-                        <div className="space-y-2 text-sm mb-4">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Mail className="w-4 h-4" />
-                                {ngo.email}
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Phone className="w-4 h-4" />
-                                {contact}
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <MapPin className="w-4 h-4" />
-                                {ngo.city}
-                            </div>
+                            {/* Action Buttons - Matching RestaurantApproval Style */}
+                            {!ngo.approved ? (
+                                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                                    <Button
+                                        onClick={() => handleApprove(ngo.id, name)}
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                        <Check className="w-4 h-4 mr-2" />
+                                        Approve
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleReject(ngo.id, name)}
+                                        variant="destructive"
+                                        className="flex-1"
+                                    >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Reject
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleRemove(ngo.id, name)}
+                                        variant="destructive"
+                                        className="flex-1 bg-red-600 hover:bg-red-700"
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => setSelectedNGO(ngo)}
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View Details
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        className="flex-1"
+                                        onClick={() => handleRemove(ngo.id, name)}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-
-                        {!ngo.approved ? (
-                            <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                                <Button
-                                    onClick={() => handleApprove(ngo.id, name)}
-                                    className="flex-1 bg-success hover:bg-success/90"
-                                >
-                                    <Check className="w-4 h-4 mr-2" />
-                                    Approve
-                                </Button>
-                                <Button
-                                    onClick={() => handleReject(ngo.id, name)}
-                                    variant="destructive"
-                                    className="flex-1"
-                                >
-                                    <X className="w-4 h-4 mr-2" />
-                                    Reject
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                                <Button 
-                                    variant="outline" 
-                                    className="flex-1"
-                                    onClick={() => setSelectedNGO(ngo)}
-                                >
-                                    View Full Details
-                                </Button>
-                                <Button 
-                                    variant="destructive" 
-                                    className="flex-1"
-                                    onClick={() => handleRemove(ngo.id, name)}
-                                >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Remove
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                );})}
+                    );
+                })}
             </div>
 
             {/* NGO Details Modal */}
@@ -260,8 +271,8 @@ const NGOManagement = () => {
                             {/* NGO Image */}
                             {(selectedNGO.imageUrl || selectedNGO.image) && (
                                 <div className="w-full h-64 rounded-lg overflow-hidden bg-muted">
-                                    <img 
-                                        src={getImageUrl(selectedNGO.imageUrl || selectedNGO.image)} 
+                                    <img
+                                        src={getImageUrl(selectedNGO.imageUrl || selectedNGO.image)}
                                         alt={selectedNGO.organizationName || selectedNGO.name}
                                         className="w-full h-full object-cover"
                                     />
@@ -318,8 +329,8 @@ const NGOManagement = () => {
                                 {/* Action Buttons */}
                                 {selectedNGO.approved && (
                                     <div className="flex gap-2 pt-4 border-t border-border">
-                                        <Button 
-                                            variant="destructive" 
+                                        <Button
+                                            variant="destructive"
                                             className="w-full"
                                             onClick={() => {
                                                 handleRemove(selectedNGO.id, selectedNGO.organizationName || selectedNGO.name);

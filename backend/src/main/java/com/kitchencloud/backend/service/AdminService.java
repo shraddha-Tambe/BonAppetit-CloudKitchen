@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.kitchencloud.backend.model.MenuItem;
 import com.kitchencloud.backend.repository.MenuItemRepository;
+import com.kitchencloud.backend.dto.AdminStatsDTO;
 
 @Service
 public class AdminService {
@@ -110,8 +111,30 @@ public class AdminService {
     @Autowired
     private com.kitchencloud.backend.repository.OrderRepository orderRepository;
 
-    public java.util.List<com.kitchencloud.backend.model.User> getAllCustomers() {
-        return userRepository.findByRole("USER"); // Assuming 'USER' role for customers
+    public java.util.List<com.kitchencloud.backend.dto.CustomerDTO> getAllCustomers() {
+        java.util.List<com.kitchencloud.backend.model.User> users = userRepository.findByRole("USER");
+        java.util.List<com.kitchencloud.backend.dto.CustomerDTO> dtos = new java.util.ArrayList<>();
+
+        for (com.kitchencloud.backend.model.User user : users) {
+            com.kitchencloud.backend.dto.CustomerDTO dto = new com.kitchencloud.backend.dto.CustomerDTO();
+            dto.setId(user.getId());
+            dto.setFullName(user.getFullName());
+            dto.setEmail(user.getEmail());
+            dto.setPhone(user.getPhone());
+            dto.setCreatedAt(user.getCreatedAt());
+            dto.setStatus(user.getStatus());
+            dto.setLoyaltyPoints(user.getLoyaltyPoints());
+
+            // Calculate stats
+            Long ordersCount = orderRepository.countByUserId(user.getId());
+            Double totalSpent = orderRepository.sumTotalAmountByUserId(user.getId());
+
+            dto.setOrdersCount(ordersCount != null ? ordersCount : 0L);
+            dto.setTotalSpent(totalSpent != null ? totalSpent : 0.0);
+
+            dtos.add(dto);
+        }
+        return dtos;
     }
 
     public java.util.Map<String, Object> getDashboardStats() {
@@ -131,6 +154,43 @@ public class AdminService {
         stats.put("pendingDeliveryBoys", pendingDeliveryBoys);
         stats.put("totalOrders", totalOrders);
         stats.put("totalRevenue", totalRevenue != null ? totalRevenue : 0.0);
+        
+        java.util.List<Object[]> statusCounts = orderRepository.countOrdersByStatus();
+        java.util.Map<String, Long> statusMap = new java.util.HashMap<>();
+        for (Object[] row : statusCounts) {
+            statusMap.put((String) row[0], (Long) row[1]);
+        }
+        stats.put("ordersPerStatus", statusMap);
+        
+        // Weekly Stats (Last 7 Days)
+        java.time.LocalDateTime sevenDaysAgo = java.time.LocalDateTime.now().minusDays(7);
+        Double weeklyRevenue = orderRepository.calculateRevenueSince(sevenDaysAgo);
+        Long weeklyOrdersCount = orderRepository.countOrdersSince(sevenDaysAgo);
+        
+        stats.put("weeklyRevenue", weeklyRevenue != null ? weeklyRevenue : 0.0);
+        stats.put("weeklyOrders", weeklyOrdersCount != null ? weeklyOrdersCount : 0L);
+
+        // Top Restaurants
+        java.util.List<Object[]> topRestRaw = orderRepository.findTopRestaurantsByRevenue(org.springframework.data.domain.PageRequest.of(0, 5));
+        java.util.List<AdminStatsDTO.TopRestaurantDTO> topRestaurants = new java.util.ArrayList<>();
+        for (Object[] row : topRestRaw) {
+            AdminStatsDTO.TopRestaurantDTO dto = new AdminStatsDTO.TopRestaurantDTO();
+            dto.setName((String) row[0]);
+            dto.setOrders((Long) row[1]);
+            dto.setRevenue((Double) row[2]);
+            topRestaurants.add(dto);
+        }
+        stats.put("topRestaurants", topRestaurants);
+
+        // Cuisine Data
+        java.util.List<Object[]> cuisineRaw = orderRepository.countOrdersByCuisine();
+        java.util.Map<String, Long> cuisineMap = new java.util.HashMap<>();
+        for (Object[] row : cuisineRaw) {
+             String cuisine = (String) row[0];
+             if (cuisine == null) cuisine = "Unknown";
+             cuisineMap.put(cuisine, (Long) row[1]);
+        }
+        stats.put("cuisineData", cuisineMap);
 
         return stats;
     }
